@@ -10,84 +10,177 @@
 /// - Stocker les films depuis Firestore
 /// - Parser les données de l'API TMDb
 /// - Afficher les films dans l'interface
+
+/// Classe Movie : Modèle de données pour un film
+/// 
+/// Cette classe est immuable (tous les champs sont final) pour garantir
+/// l'intégrité des données. Pour modifier un film, créer une nouvelle instance.
 class Movie {
   /// Identifiant unique du film (peut être un ID TMDb ou un ID Firestore)
-  final String id;
+  /// 
+  /// Cet ID peut provenir de différentes sources :
+  /// - ID TMDb : Si le film vient de l'API The Movie Database
+  /// - ID Firestore : Si le film a été ajouté manuellement par un admin
+  /// - Timestamp : Si le film a été créé dans l'application
+  /// 
+  /// Type : String (non nullable, toujours présent)
+  final String id; // Identifiant unique du film (requis)
   
   /// Titre du film
-  final String title;
+  /// 
+  /// Titre complet du film tel qu'affiché dans l'interface.
+  /// Utilisé pour la recherche et l'affichage.
+  /// 
+  /// Type : String (non nullable, toujours présent)
+  final String title; // Titre du film (requis)
   
   /// Description/résumé du film
-  final String description;
+  /// 
+  /// Synopsis ou résumé du film.
+  /// Utilisé pour l'affichage dans la liste et la page de détails.
+  /// 
+  /// Type : String (non nullable, peut être vide "")
+  final String description; // Description du film (requis)
   
   /// URL de l'affiche du film
-  final String imageUrl;
+  /// 
+  /// URL complète de l'image de l'affiche du film.
+  /// Peut provenir de TMDb, d'une URL externe, ou d'un placeholder.
+  /// 
+  /// Type : String (non nullable, toujours présent)
+  final String imageUrl; // URL de l'affiche (requis)
   
   /// Note du film sur 10 (peut être 0 si non spécifiée)
-  final double rating;
+  /// 
+  /// Note moyenne du film, généralement sur une échelle de 0 à 10.
+  /// Utilisée pour l'affichage et le tri des films.
+  /// 
+  /// Type : double (non nullable, 0.0 par défaut)
+  final double rating; // Note du film (requis)
   
   /// Année de sortie du film
-  final int year;
+  /// 
+  /// Année de sortie du film en salle.
+  /// Utilisée pour l'affichage et le filtrage.
+  /// 
+  /// Type : int (non nullable, 0 par défaut)
+  final int year; // Année de sortie (requis)
   
   /// Genre(s) du film (ex: "Action, Thriller")
-  final String genre;
+  /// 
+  /// Liste des genres séparés par des virgules.
+  /// Peut contenir un ou plusieurs genres.
+  /// 
+  /// Type : String (non nullable, peut être vide "")
+  final String genre; // Genre(s) du film (requis)
   
   /// Nom du réalisateur
-  final String director;
+  /// 
+  /// Nom du réalisateur principal du film.
+  /// Utilisé pour l'affichage dans la page de détails.
+  /// 
+  /// Type : String (non nullable, peut être "Non spécifié")
+  final String director; // Nom du réalisateur (requis)
 
   /// Constructeur du modèle Movie
   /// 
-  /// Tous les paramètres sont requis pour garantir l'intégrité des données
+  /// Crée une nouvelle instance Movie avec tous les paramètres requis.
+  /// 
+  /// Tous les paramètres sont requis (required) pour garantir l'intégrité des données.
+  /// Aucun paramètre n'a de valeur par défaut pour éviter les films incomplets.
+  /// 
+  /// Paramètres :
+  /// - [id] : Identifiant unique (requis, non nullable)
+  /// - [title] : Titre du film (requis, non nullable)
+  /// - [description] : Description (requis, non nullable)
+  /// - [imageUrl] : URL de l'affiche (requis, non nullable)
+  /// - [rating] : Note sur 10 (requis, non nullable)
+  /// - [year] : Année de sortie (requis, non nullable)
+  /// - [genre] : Genre(s) (requis, non nullable)
+  /// - [director] : Réalisateur (requis, non nullable)
   Movie({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.imageUrl,
-    required this.rating,
-    required this.year,
-    required this.genre,
-    required this.director,
+    required this.id, // ID unique (obligatoire)
+    required this.title, // Titre (obligatoire)
+    required this.description, // Description (obligatoire)
+    required this.imageUrl, // URL image (obligatoire)
+    required this.rating, // Note (obligatoire)
+    required this.year, // Année (obligatoire)
+    required this.genre, // Genre (obligatoire)
+    required this.director, // Réalisateur (obligatoire)
   });
 
-  /// Crée une instance Movie à partir d'un JSON (Firestore ou API)
+  /// Factory constructor : Crée une instance Movie à partir d'un JSON (Firestore ou API)
   /// 
-  /// Cette méthode est utilisée pour :
-  /// - Désérialiser les données depuis Firestore
-  /// - Parser les réponses de l'API TMDb
+  /// Cette méthode désérialise les données JSON en créant une instance Movie.
+  /// Elle est utilisée pour :
+  /// - Désérialiser les données depuis Firestore (getMoviesFromFirestore)
+  /// - Parser les réponses de l'API TMDb (_parseMovieFromTMDB)
   /// 
   /// Utilise des valeurs par défaut si certains champs sont absents
-  /// pour éviter les erreurs de parsing
+  /// pour éviter les erreurs de parsing et garantir qu'une instance Movie
+  /// est toujours créée, même avec des données incomplètes.
+  /// 
+  /// Paramètres :
+  /// - [json] : Map<String, dynamic> contenant les données JSON
+  /// 
+  /// Retourne : Une instance Movie avec des valeurs par défaut si des champs sont absents
+  /// 
+  /// Valeurs par défaut :
+  /// - id : '' (chaîne vide)
+  /// - title : '' (chaîne vide)
+  /// - description : '' (chaîne vide)
+  /// - imageUrl : '' (chaîne vide)
+  /// - rating : 0.0 (zéro)
+  /// - year : 0 (zéro)
+  /// - genre : '' (chaîne vide)
+  /// - director : '' (chaîne vide)
   factory Movie.fromJson(Map<String, dynamic> json) {
+    // Créer et retourner une instance Movie avec les données parsées
     return Movie(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
-      rating: (json['rating'] ?? 0.0).toDouble(),
-      year: json['year'] ?? 0,
-      genre: json['genre'] ?? '',
-      director: json['director'] ?? '',
+      // id : Récupérer depuis JSON ou chaîne vide si absent
+      id: json['id'] ?? '', // ID ou chaîne vide
+      // title : Récupérer depuis JSON ou chaîne vide si absent
+      title: json['title'] ?? '', // Titre ou chaîne vide
+      // description : Récupérer depuis JSON ou chaîne vide si absent
+      description: json['description'] ?? '', // Description ou chaîne vide
+      // imageUrl : Récupérer depuis JSON ou chaîne vide si absent
+      imageUrl: json['imageUrl'] ?? '', // URL image ou chaîne vide
+      // rating : Récupérer depuis JSON, convertir en double, ou 0.0 si absent
+      // (json['rating'] ?? 0.0) : Utiliser la valeur JSON ou 0.0 par défaut
+      // .toDouble() : Convertir en double (nécessaire si c'est un int)
+      rating: (json['rating'] ?? 0.0).toDouble(), // Note ou 0.0
+      // year : Récupérer depuis JSON ou 0 si absent
+      year: json['year'] ?? 0, // Année ou 0
+      // genre : Récupérer depuis JSON ou chaîne vide si absent
+      genre: json['genre'] ?? '', // Genre ou chaîne vide
+      // director : Récupérer depuis JSON ou chaîne vide si absent
+      director: json['director'] ?? '', // Réalisateur ou chaîne vide
     );
   }
 
-  /// Convertit une instance Movie en JSON pour Firestore
+  /// Méthode toJson : Convertit une instance Movie en JSON pour Firestore
   /// 
-  /// Cette méthode est utilisée pour :
-  /// - Sauvegarder un film dans Firestore
-  /// - Envoyer des données à l'API
+  /// Cette méthode sérialise l'instance Movie en Map<String, dynamic>
+  /// pour pouvoir l'enregistrer dans Firestore ou l'envoyer à une API.
   /// 
-  /// Retourne un Map avec tous les champs du film
+  /// Utilisée pour :
+  /// - Sauvegarder un film dans Firestore (addMovie)
+  /// - Envoyer des données à l'API (si nécessaire)
+  /// 
+  /// Retourne : Un Map<String, dynamic> avec tous les champs du film
+  /// 
+  /// Note : Tous les champs sont inclus, y compris l'ID (contrairement à AppUser.toJson)
   Map<String, dynamic> toJson() {
+    // Retourner un Map avec tous les champs du film
     return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'imageUrl': imageUrl,
-      'rating': rating,
-      'year': year,
-      'genre': genre,
-      'director': director,
+      'id': id, // Identifiant unique
+      'title': title, // Titre du film
+      'description': description, // Description
+      'imageUrl': imageUrl, // URL de l'affiche
+      'rating': rating, // Note sur 10
+      'year': year, // Année de sortie
+      'genre': genre, // Genre(s)
+      'director': director, // Réalisateur
     };
   }
 }
-
