@@ -43,36 +43,167 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Classe d'état pour HomeScreen
+/// 
+/// Cette classe gère l'état mutable de l'écran d'accueil.
+/// Elle hérite de State<HomeScreen> et implémente SingleTickerProviderStateMixin
+/// pour utiliser un TabController (nécessaire pour les onglets).
+/// 
+/// SingleTickerProviderStateMixin : Fournit un Ticker pour animer le TabController
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   // ========== SERVICES ==========
   
-  /// Service pour récupérer les films (Firestore + API)
+  /// Service pour récupérer les films depuis Firestore et l'API externe (TMDb)
+  /// 
+  /// Ce service combine les films depuis plusieurs sources :
+  /// - Firestore : Films ajoutés manuellement par les administrateurs
+  /// - API TMDb : Films populaires récupérés depuis l'API externe
+  /// - Films de démonstration : Fallback si aucune autre source n'est disponible
+  /// 
+  /// Instance finale (ne change jamais après l'initialisation)
   final MovieService _movieService = MovieService();
   
-  /// Service pour gérer les données Firestore (utilisateurs, favoris)
+  /// Service pour gérer les données Firestore (utilisateurs, favoris, matching)
+  /// 
+  /// Ce service centralise toutes les opérations de base de données :
+  /// - Récupération des données utilisateur
+  /// - Gestion des films favoris (ajout/retrait)
+  /// - Calcul du matching entre utilisateurs
+  /// 
+  /// Instance finale (ne change jamais après l'initialisation)
   final FirestoreService _firestoreService = FirestoreService();
   
+  // ========== ÉTAT DE L'INTERFACE ==========
+  
+  /// Liste de tous les films disponibles dans l'application
+  /// 
+  /// Cette liste est remplie lors du chargement initial depuis MovieService.
+  /// Elle contient tous les films (Firestore + API + démo).
+  /// 
+  /// Initialisée à une liste vide [] au démarrage
   List<Movie> _movies = [];
+  
+  /// Liste des films filtrés selon la recherche de l'utilisateur
+  /// 
+  /// Cette liste est mise à jour à chaque changement dans le champ de recherche.
+  /// Si la recherche est vide, elle contient tous les films (_movies).
+  /// Sinon, elle contient uniquement les films correspondant à la recherche.
+  /// 
+  /// Initialisée à une liste vide [] au démarrage
   List<Movie> _filteredMovies = [];
+  
+  /// Liste des films favoris de l'utilisateur actuel
+  /// 
+  /// Cette liste est remplie depuis Firestore en récupérant les IDs des favoris
+  /// puis en chargeant les détails de chaque film depuis MovieService.
+  /// 
+  /// Initialisée à une liste vide [] au démarrage
   List<Movie> _favoriteMovies = [];
+  
+  /// Indicateur de chargement pour la liste principale des films
+  /// 
+  /// true : Les films sont en cours de chargement (afficher un spinner)
+  /// false : Les films sont chargés (afficher la liste)
+  /// 
+  /// Initialisé à true car on charge les films au démarrage
   bool _isLoading = true;
+  
+  /// Indicateur de chargement pour la liste des favoris
+  /// 
+  /// true : Les favoris sont en cours de chargement (afficher un spinner)
+  /// false : Les favoris sont chargés (afficher la liste ou message vide)
+  /// 
+  /// Initialisé à false car on charge les favoris après les données utilisateur
   bool _isLoadingFavorites = false;
+  
+  /// Contrôleur pour le champ de recherche de films
+  /// 
+  /// Ce contrôleur gère le texte saisi dans le champ de recherche.
+  /// Il a un listener (_onSearchChanged) qui se déclenche à chaque modification.
+  /// 
+  /// Instance finale (créée une seule fois et réutilisée)
   final TextEditingController _searchController = TextEditingController();
+  
+  /// Utilisateur Firebase Auth actuellement connecté
+  /// 
+  /// Récupéré depuis FirebaseAuth.instance.currentUser.
+  /// Peut être null si aucun utilisateur n'est connecté.
+  /// 
+  /// Instance finale (ne change pas après l'initialisation)
   final User? _user = FirebaseAuth.instance.currentUser;
+  
+  /// Données utilisateur complètes depuis Firestore
+  /// 
+  /// Contient toutes les informations de l'utilisateur (nom, prénom, âge, photo, etc.)
+  /// Récupéré depuis Firestore via FirestoreService.getUserById().
+  /// 
+  /// Peut être null si le profil n'existe pas encore dans Firestore.
   AppUser? _appUser;
+  
+  /// Indicateur si l'utilisateur actuel est administrateur
+  /// 
+  /// true : L'utilisateur a le rôle "admin" dans Firestore
+  /// false : L'utilisateur a le rôle "user" (par défaut)
+  /// 
+  /// Utilisé pour afficher/masquer l'onglet Admin dans le TabBar.
+  /// 
+  /// Initialisé à false par défaut
   bool _isAdmin = false;
   
+  /// Contrôleur pour gérer les onglets (Films, Favoris, Matching, Admin)
+  /// 
+  /// Ce contrôleur gère la navigation entre les différents onglets.
+  /// Il est initialisé avec 4 onglets (le dernier est masqué si pas admin).
+  /// 
+  /// late : Initialisé dans initState(), pas à la déclaration
   late TabController _tabController;
 
+  /// Méthode initState : Appelée une seule fois lors de la création du widget
+  /// 
+  /// Cette méthode est appelée automatiquement par Flutter après la création du widget.
+  /// Elle est utilisée pour initialiser les données et les services.
+  /// 
+  /// Ordre d'exécution :
+  /// 1. Appeler super.initState() (obligatoire)
+  /// 2. Initialiser le TabController
+  /// 3. Charger les données utilisateur (avec délai pour éviter les erreurs Firebase)
+  /// 4. Charger les films
+  /// 5. Ajouter un listener au champ de recherche
   @override
   void initState() {
+    // Appeler super.initState() est OBLIGATOIRE
+    // Cette méthode initialise l'état du widget parent (State<HomeScreen>)
     super.initState();
+    
+    // Initialiser le TabController pour gérer les onglets
+    // Cette méthode configure le contrôleur avec 4 onglets
     _initializeTabController();
+    
     // Délayer le chargement des données utilisateur pour éviter les erreurs Firebase
+    // 
+    // Problème : Firebase peut avoir des erreurs internes (PigeonUserDetails) si on
+    // accède aux données utilisateur trop rapidement après la connexion.
+    // 
+    // Solution : Attendre 500ms avant de charger les données utilisateur.
+    // Cela laisse le temps à Firebase de terminer ses opérations internes.
+    // 
+    // Future.delayed : Crée un Future qui se complète après le délai spécifié
+    // Duration(milliseconds: 500) : Délai de 500 millisecondes (0.5 seconde)
+    // () { _loadUserData(); } : Fonction anonyme appelée après le délai
     Future.delayed(const Duration(milliseconds: 500), () {
+      // Charger les données utilisateur depuis Firestore
+      // Cette méthode récupère le profil complet de l'utilisateur
       _loadUserData();
     });
+    
+    // Charger immédiatement la liste des films
+    // Cette méthode récupère les films depuis Firestore et l'API
+    // Elle ne dépend pas de l'utilisateur, donc pas besoin de délai
     _loadMovies();
+    
+    // Ajouter un listener au contrôleur de recherche
+    // Ce listener se déclenche à chaque modification du texte dans le champ de recherche
+    // _onSearchChanged est appelée automatiquement à chaque changement
     _searchController.addListener(_onSearchChanged);
   }
 

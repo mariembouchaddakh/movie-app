@@ -42,3 +42,4 @@ class AppConstants {
   static const String rapidApiBaseUrl = 'https://moviesdatabase.p.rapidapi.com';
 }
 
+
