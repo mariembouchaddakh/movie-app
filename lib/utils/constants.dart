@@ -125,7 +125,10 @@ class AppConstants {
   /// - Pour obtenir une clé gratuite : https://www.themoviedb.org/settings/api
   /// 
   /// Type : String (constante, doit être remplacée par votre clé)
-  static const String tmdbApiKey = 'YOUR_TMDB_API_KEY'; // Clé API TMDb (à remplacer)
+  /// 
+  /// ⚠️ IMPORTANT : Pour utiliser votre clé API locale, modifiez directement cette ligne
+  /// ou utilisez le fichier constants.local.dart et remplacez cette valeur.
+  static const String tmdbApiKey = '163d0ee76e9574fd92df6be7c89948b2'; // Clé API TMDb
   
   /// URL de base de l'API TMDb
   /// 

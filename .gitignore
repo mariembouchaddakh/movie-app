@@ -54,6 +54,9 @@ app.*.map.json
 .env.local
 .env.*.local
 
+# Local API keys configuration (never commit this!)
+lib/utils/constants.local.dart
+
 # IDE specific files
 .vscode/
 .idea/

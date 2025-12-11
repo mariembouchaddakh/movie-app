@@ -295,16 +295,35 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // builder : Fonction appelée à chaque fois que le Stream émet une nouvelle valeur
       // Cette fonction reçoit le contexte et un snapshot contenant les données du Stream
       builder: (context, snapshot) {
+        // Log pour déboguer
+        debugPrint('🔍 AuthWrapper - ConnectionState: ${snapshot.connectionState}');
+        debugPrint('🔍 AuthWrapper - hasData: ${snapshot.hasData}');
+        debugPrint('🔍 AuthWrapper - hasError: ${snapshot.hasError}');
+        if (snapshot.hasError) {
+          debugPrint('🔍 AuthWrapper - Error: ${snapshot.error}');
+        }
+        
         // snapshot.connectionState : État de la connexion au Stream
         // ConnectionState.waiting : Le Stream n'a pas encore émis de valeur (chargement initial)
         // Dans ce cas, on affiche un indicateur de chargement
         if (snapshot.connectionState == ConnectionState.waiting) {
+          debugPrint('⏳ AuthWrapper - Affiche l\'indicateur de chargement');
           // Retourner un Scaffold avec un indicateur de chargement centré
           // Scaffold : Widget de base pour une page Material Design
           // Center : Widget qui centre son enfant
           // CircularProgressIndicator : Indicateur de chargement circulaire animé
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Gérer les erreurs
+        if (snapshot.hasError) {
+          debugPrint('❌ AuthWrapper - Erreur: ${snapshot.error}');
+          return Scaffold(
+            body: Center(
+              child: Text('Erreur: ${snapshot.error}'),
+            ),
           );
         }
 
@@ -328,7 +347,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
         // L'utilisateur devra se connecter même s'il a une session active
         // Ce comportement est utile pour les tests ou pour forcer la reconnexion
         // const LoginScreen() crée une instance constante de l'écran de connexion
+        debugPrint('✅ AuthWrapper - Affiche LoginScreen');
+        try {
         return const LoginScreen();
+        } catch (e, stackTrace) {
+          debugPrint('❌ Erreur lors de la création de LoginScreen: $e');
+          debugPrint('Stack trace: $stackTrace');
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Erreur: $e'),
+                ],
+              ),
+            ),
+          );
+        }
       },
     );
   }

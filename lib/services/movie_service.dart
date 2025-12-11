@@ -85,16 +85,21 @@ class MovieService {
     // Essayer d'abord TMDb (plus simple et gratuit)
     if (AppConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' && 
         AppConstants.tmdbApiKey.isNotEmpty) {
+      print('🔑 Clé API TMDb détectée, tentative de récupération...');
       return await _getMoviesFromTMDB();
     }
     
     // Sinon, essayer RapidAPI si configuré
     if (AppConstants.rapidApiKey != 'YOUR_RAPIDAPI_KEY' && 
         AppConstants.rapidApiKey.isNotEmpty) {
+      print('🔑 Clé API RapidAPI détectée, tentative de récupération...');
       return await _getMoviesFromRapidAPI();
     }
     
-    print('⚠️ Aucune clé API configurée. Utilisez les films de démonstration.');
+    print('⚠️ Aucune clé API configurée.');
+    print('⚠️ Clé TMDb actuelle: ${AppConstants.tmdbApiKey.substring(0, AppConstants.tmdbApiKey.length > 20 ? 20 : AppConstants.tmdbApiKey.length)}...');
+    print('⚠️ Pour obtenir une clé API gratuite: https://www.themoviedb.org/settings/api');
+    print('⚠️ Utilisation des films de démonstration.');
     return [];
   }
 
@@ -133,8 +138,14 @@ class MovieService {
             }
           } else {
             print('❌ Erreur TMDb page $page - Status: ${response.statusCode}');
+            print('❌ Réponse: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
             if (response.statusCode == 401) {
               print('❌ Clé API invalide ou expirée');
+              print('❌ Vérifiez votre clé API dans lib/utils/constants.dart');
+              print('❌ Obtenez une clé gratuite: https://www.themoviedb.org/settings/api');
+              break;
+            } else if (response.statusCode == 404) {
+              print('❌ Endpoint non trouvé. Vérifiez l\'URL de l\'API.');
               break;
             }
           }

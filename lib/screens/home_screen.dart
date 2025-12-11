@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   /// 
   /// Instance finale (ne change pas après l'initialisation)
   final User? _user = FirebaseAuth.instance.currentUser;
-  
+
   /// Données utilisateur complètes depuis Firestore
   /// 
   /// Contient toutes les informations de l'utilisateur (nom, prénom, âge, photo, etc.)
@@ -225,12 +225,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (_user != null) {
       // Utiliser un try-catch avec gestion spécifique de l'erreur PigeonUserDetails
       try {
-        debugPrint('Chargement des données utilisateur pour: ${_user!.uid}');
+        debugPrint('Chargement des données utilisateur pour: ${_user!.uid} (${_user!.email})');
         
         // Charger les données utilisateur avec gestion d'erreur spécifique
         AppUser? appUser;
         try {
           appUser = await _firestoreService.getUserById(_user!.uid);
+          if (appUser != null) {
+            debugPrint('✅ Utilisateur chargé: ${appUser.firstName} ${appUser.lastName}');
+          }
         } catch (e) {
           final errorString = e.toString().toLowerCase();
           if (errorString.contains('pigeonuserdetails') || 
@@ -463,147 +466,147 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildMovieList(List<Movie> movies) {
     if (movies.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.movie_filter_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun film trouvé',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: movies.length,
-      itemBuilder: (context, index) {
-        final movie = movies[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
-            onTap: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MovieDetailScreen(movie: movie),
-                ),
-              );
-              // Recharger les favoris après retour de la page de détails
-              if (_user != null) {
-                _loadFavoriteMovies();
-              }
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image du film
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      movie.imageUrl,
-                      width: 100,
-                      height: 150,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 100,
-                          height: 150,
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.movie,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Informations du film
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          movie.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 20,
+                              Icons.movie_filter_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(height: 16),
                             Text(
-                              movie.rating.toString(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              '${movie.year}',
+                              'Aucun film trouvé',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 18,
                                 color: Colors.grey[600],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          movie.genre,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          movie.description,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      );
+    }
+
+    return ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+      itemCount: movies.length,
+                        itemBuilder: (context, index) {
+        final movie = movies[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+            onTap: () async {
+              final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                  builder: (context) => MovieDetailScreen(movie: movie),
+                                  ),
+                                );
+              // Recharger les favoris après retour de la page de détails
+              if (_user != null) {
+                _loadFavoriteMovies();
+              }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Image du film
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        movie.imageUrl,
+                                        width: 100,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            width: 100,
+                                            height: 150,
+                                            color: Colors.grey[300],
+                                            child: const Icon(
+                                              Icons.movie,
+                                              size: 50,
+                                              color: Colors.grey,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // Informations du film
+                                    Expanded(
+                                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            movie.title,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.star,
+                                                color: Colors.amber,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                movie.rating.toString(),
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Text(
+                                                '${movie.year}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            movie.genre,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            movie.description,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[700],
+                                            ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
     );
   }
 
@@ -753,7 +756,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 )
               : const Center(
                   child: Text('Accès réservé aux administrateurs'),
-                ),
+          ),
         ],
       ),
     );

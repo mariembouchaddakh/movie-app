@@ -242,106 +242,147 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       // Créer un compte avec Firebase Auth
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: email,
-      password: _passwordController.text,
-      );
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw Exception('Erreur lors de la création du compte');
-      }
-
-      // Upload de la photo si elle existe
-      String? photoUrl;
-      if (_profileImage != null) {
-        try {
-          photoUrl = await _firestoreService.uploadProfilePhoto(user.uid, _profileImage!);
-          if (photoUrl == null) {
-            debugPrint('Avertissement: L\'upload de la photo a échoué, mais le compte sera créé sans photo');
-          }
-        } catch (e) {
-          debugPrint('Erreur lors de l\'upload de la photo: $e');
-          // Continuer sans photo si l'upload échoue
-        }
-      }
-
-      // Créer le profil utilisateur dans Firestore
-      final appUser = AppUser(
-        id: user.uid,
+      FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
-        firstName: firstName,
-        lastName: lastName,
-        age: age,
-        photoUrl: photoUrl,
-        role: 'user',
-        isActive: true,
-      );
+        password: _passwordController.text,
+      ).then((userCredential) async {
+        final user = userCredential.user;
+        if (user == null) {
+          throw Exception('Erreur lors de la création du compte');
+        }
 
-      try {
-        await _firestoreService.createOrUpdateUser(appUser);
-        debugPrint('Profil Firestore créé avec succès');
-      } catch (e) {
-        debugPrint('Erreur lors de la création du profil Firestore: $e');
-        // Le compte Firebase Auth est créé, mais le profil Firestore n'a pas pu être créé
-        // On peut continuer, l'utilisateur pourra se connecter et le profil sera créé à la connexion
-        // Ne pas bloquer l'inscription pour cette erreur
-      }
+        debugPrint('✅ Compte Firebase Auth créé: ${user.uid}');
 
-      // Si l'inscription réussit
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _message = 'Inscription réussie !';
-        });
-        
-        // Naviguer vers l'écran de connexion après un court délai
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            );
+        // Upload de la photo si elle existe
+        String? photoUrl;
+        if (_profileImage != null) {
+          try {
+            photoUrl = await _firestoreService.uploadProfilePhoto(user.uid, _profileImage!);
+            if (photoUrl == null) {
+              debugPrint('Avertissement: L\'upload de la photo a échoué, mais le compte sera créé sans photo');
+            }
+          } catch (e) {
+            debugPrint('Erreur lors de l\'upload de la photo: $e');
+            // Continuer sans photo si l'upload échoue
           }
-        });
-      }
-    } catch (error) {
-      // Si il y a une erreur
-      setState(() {
-        _isLoading = false;
-        String errorMessage = 'Erreur lors de l\'inscription';
-        
+        }
+
+        // Créer le profil utilisateur dans Firestore
+        final appUser = AppUser(
+          id: user.uid,
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          age: age,
+          photoUrl: photoUrl,
+          role: 'user',
+          isActive: true,
+        );
+
+        try {
+          await _firestoreService.createOrUpdateUser(appUser);
+          debugPrint('✅ Profil Firestore créé avec succès');
+        } catch (e) {
+          debugPrint('Erreur lors de la création du profil Firestore: $e');
+          // Le compte Firebase Auth est créé, mais le profil Firestore n'a pas pu être créé
+          // On peut continuer, l'utilisateur pourra se connecter et le profil sera créé à la connexion
+          // Ne pas bloquer l'inscription pour cette erreur
+        }
+
+        // Si l'inscription réussit
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _message = 'Inscription réussie !';
+          });
+          
+          debugPrint('✅ Navigation vers l\'écran de connexion...');
+          // Naviguer vers l'écran de connexion après un court délai
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              );
+            }
+          });
+        }
+      }).catchError((error) {
+        // Ignorer l'erreur "PigeonUserDetails" si elle survient après une inscription réussie
         final errorString = error.toString().toLowerCase();
-        
-        if (errorString.contains('email-already-in-use') || errorString.contains('email déjà utilisé')) {
-          errorMessage = 'Cet email est déjà utilisé';
-        } else if (errorString.contains('invalid-email') || errorString.contains('email invalide')) {
-          errorMessage = 'Email invalide';
-        } else if (errorString.contains('weak-password') || errorString.contains('mot de passe trop faible')) {
-          errorMessage = 'Mot de passe trop faible (minimum 6 caractères)';
-        } else if (errorString.contains('network-request-failed') || errorString.contains('réseau')) {
-          errorMessage = 'Erreur de connexion réseau. Vérifiez votre connexion internet';
-        } else if (errorString.contains('operation-not-allowed')) {
-          errorMessage = 'L\'inscription par email n\'est pas activée dans Firebase';
-        } else if (errorString.contains('permission-denied') || errorString.contains('permission refusée')) {
-          errorMessage = 'Permission refusée. Vérifiez la configuration Firestore';
-        } else if (errorString.contains('unavailable')) {
-          errorMessage = 'Service temporairement indisponible. Réessayez plus tard';
-        } else if (errorString.contains('configuration_not_found') || errorString.contains('configuration not found')) {
-          errorMessage = 'Configuration Firebase manquante.\n\n'
-              'Solution : Ajoutez les empreintes SHA dans Firebase Console.\n'
-              'Voir le fichier FIX_FIREBASE_AUTH.md pour les instructions.\n\n'
-              'SHA-1: C7:62:54:87:8D:D3:D3:63:50:F9:F5:91:B6:9D:C0:39:63:25:D8:C7\n'
-              'SHA-256: 32:91:68:75:39:DE:E0:78:85:1A:01:59:70:AA:67:CE:08:B6:93:B6:C1:81:41:B8:9A:A8:26:C3:FB:3E:95:41';
-        } else {
-          // Afficher le message d'erreur complet pour le débogage
-          errorMessage = 'Erreur: ${error.toString()}';
-          debugPrint('Erreur d\'inscription complète: $error');
+        if (errorString.contains('pigeonuserdetails') || 
+            errorString.contains('list<object?>') ||
+            (errorString.contains('type') && errorString.contains('subtype'))) {
+          debugPrint('⚠️ Erreur Firebase interne ignorée (non bloquante): $error');
+          
+          // Vérifier si l'utilisateur a bien été créé malgré l'erreur
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null && mounted) {
+            debugPrint('✅ L\'utilisateur a été créé malgré l\'erreur: ${currentUser.email}');
+            setState(() {
+              _isLoading = false;
+              _message = 'Inscription réussie !';
+            });
+            
+            // Naviguer vers l'écran de connexion
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              }
+            });
+            return; // Ne pas traiter comme une erreur
+          }
         }
         
-        _message = errorMessage;
+        // Pour les autres erreurs, les traiter normalement
+        _handleSignUpError(error);
       });
+    } catch (error) {
+      _handleSignUpError(error);
     }
+  }
+  
+  void _handleSignUpError(dynamic error) {
+    // Si il y a une erreur
+    setState(() {
+      _isLoading = false;
+      String errorMessage = 'Erreur lors de l\'inscription';
+      
+      final errorString = error.toString().toLowerCase();
+      
+      debugPrint('❌ Erreur d\'inscription: $error');
+      
+      if (errorString.contains('email-already-in-use') || errorString.contains('email déjà utilisé')) {
+        errorMessage = 'Cet email est déjà utilisé';
+      } else if (errorString.contains('invalid-email') || errorString.contains('email invalide')) {
+        errorMessage = 'Email invalide';
+      } else if (errorString.contains('weak-password') || errorString.contains('mot de passe trop faible')) {
+        errorMessage = 'Mot de passe trop faible (minimum 6 caractères)';
+      } else if (errorString.contains('network-request-failed') || errorString.contains('réseau')) {
+        errorMessage = 'Erreur de connexion réseau. Vérifiez votre connexion internet';
+      } else if (errorString.contains('operation-not-allowed')) {
+        errorMessage = 'L\'inscription par email n\'est pas activée dans Firebase';
+      } else if (errorString.contains('permission-denied') || errorString.contains('permission refusée')) {
+        errorMessage = 'Permission refusée. Vérifiez la configuration Firestore';
+      } else if (errorString.contains('unavailable')) {
+        errorMessage = 'Service temporairement indisponible. Réessayez plus tard';
+      } else if (errorString.contains('configuration_not_found') || errorString.contains('configuration not found')) {
+        errorMessage = 'Configuration Firebase manquante.\n\n'
+            'Solution : Ajoutez les empreintes SHA dans Firebase Console.\n'
+            'Voir le fichier FIX_FIREBASE_AUTH.md pour les instructions.\n\n'
+            'SHA-1: C7:62:54:87:8D:D3:D3:63:50:F9:F5:91:B6:9D:C0:39:63:25:D8:C7\n'
+            'SHA-256: 32:91:68:75:39:DE:E0:78:85:1A:01:59:70:AA:67:CE:08:B6:93:B6:C1:81:41:B8:9A:A8:26:C3:FB:3E:95:41';
+      } else {
+        // Afficher le message d'erreur complet pour le débogage
+        errorMessage = 'Erreur: ${error.toString()}';
+        debugPrint('Erreur d\'inscription complète: $error');
+      }
+      
+      _message = errorMessage;
+    });
   }
 
   @override

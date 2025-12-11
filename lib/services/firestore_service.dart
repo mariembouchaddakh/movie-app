@@ -469,55 +469,120 @@ class FirestoreService {
   // Trouver les utilisateurs avec un taux de correspondance > 75%
   Future<List<Map<String, dynamic>>> findMatchingUsers(String userId) async {
     try {
-      print('🔍 Recherche de correspondances pour l\'utilisateur: $userId');
+      print('');
+      print('═══════════════════════════════════════════════════════');
+      print('🔍 DÉBUT DE LA RECHERCHE DE CORRESPONDANCES');
+      print('═══════════════════════════════════════════════════════');
+      print('📋 UID recherché: $userId');
       
       final currentUser = await getUserById(userId);
       if (currentUser == null) {
-        print('❌ Utilisateur actuel non trouvé');
+        print('❌ ERREUR: Utilisateur actuel non trouvé dans Firestore!');
+        print('═══════════════════════════════════════════════════════');
         return [];
       }
 
-      print('👤 Utilisateur actuel: ${currentUser.firstName} ${currentUser.lastName}');
-      print('🎬 Favoris de l\'utilisateur actuel: ${currentUser.favoriteMovies.length} films');
-      print('   IDs: ${currentUser.favoriteMovies}');
+      print('');
+      print('👤 UTILISATEUR ACTUEL:');
+      print('   Nom: ${currentUser.firstName} ${currentUser.lastName}');
+      print('   Email: ${currentUser.email}');
+      print('   ID: ${currentUser.id}');
+      print('   Actif: ${currentUser.isActive}');
+      print('   🎬 Favoris: ${currentUser.favoriteMovies.length} films');
+      print('   📋 IDs des favoris: ${currentUser.favoriteMovies}');
 
+      if (currentUser.favoriteMovies.isEmpty) {
+        print('');
+        print('⚠️ ATTENTION: Aucun film favori pour cet utilisateur!');
+        print('   Le matching ne peut pas fonctionner sans favoris.');
+        print('   Ajoutez des films aux favoris dans l\'onglet Films.');
+        print('═══════════════════════════════════════════════════════');
+        return [];
+      }
+
+      print('');
+      print('📥 RÉCUPÉRATION DE TOUS LES UTILISATEURS...');
       final allUsers = await getAllUsers();
       print('👥 Total d\'utilisateurs dans la base: ${allUsers.length}');
 
+      if (allUsers.isEmpty) {
+        print('❌ ERREUR: Aucun utilisateur récupéré!');
+        print('   Vérifiez les règles Firestore.');
+        print('═══════════════════════════════════════════════════════');
+        return [];
+      }
+
+      print('');
+      print('🔄 COMPARAISON AVEC CHAQUE UTILISATEUR...');
+      print('───────────────────────────────────────────────────────');
+
       final matches = <Map<String, dynamic>>[];
+      int comparisonCount = 0;
 
       for (final user in allUsers) {
         // Ignorer l'utilisateur actuel et les utilisateurs désactivés
-        if (user.id == userId || !user.isActive) {
-          if (user.id == userId) {
-            print('⏭️ Ignoré: utilisateur actuel');
-          } else {
-            print('⏭️ Ignoré: ${user.firstName} ${user.lastName} (désactivé)');
-          }
+        if (user.id == userId) {
+          print('⏭️ Ignoré: ${user.firstName} ${user.lastName} (utilisateur actuel)');
+          continue;
+        }
+        
+        if (!user.isActive) {
+          print('⏭️ Ignoré: ${user.firstName} ${user.lastName} (compte désactivé)');
           continue;
         }
 
-        print('🔍 Comparaison avec: ${user.firstName} ${user.lastName}');
-        print('   Favoris: ${user.favoriteMovies.length} films - IDs: ${user.favoriteMovies}');
+        comparisonCount++;
+        print('');
+        print('🔍 Comparaison #$comparisonCount avec: ${user.firstName} ${user.lastName}');
+        print('   Email: ${user.email}');
+        print('   Favoris: ${user.favoriteMovies.length} films');
+        print('   IDs: ${user.favoriteMovies}');
+
+        if (user.favoriteMovies.isEmpty) {
+          print('   ⚠️ Cet utilisateur n\'a pas de favoris, matching impossible');
+          continue;
+        }
 
         final matchRate = calculateMatchRate(currentUser, user);
-        print('   Taux de correspondance: ${matchRate.toStringAsFixed(1)}%');
+        print('   📊 Taux de correspondance: ${matchRate.toStringAsFixed(1)}%');
 
-        if (matchRate > 75.0) {
-          print('✅ Correspondance trouvée! (${matchRate.toStringAsFixed(1)}%)');
+        if (matchRate >= 75.0) {
+          print('   ✅ MATCH TROUVÉ! (${matchRate.toStringAsFixed(1)}% >= 75%)');
           matches.add({
             'user': user,
             'matchRate': matchRate,
           });
+        } else if (matchRate >= 50.0) {
+          print('   ⚠️ Correspondance moyenne (${matchRate.toStringAsFixed(1)}% - seuil: >=75%)');
         } else {
-          print('❌ Correspondance insuffisante (${matchRate.toStringAsFixed(1)}% < 75%)');
+          print('   ❌ Correspondance faible (${matchRate.toStringAsFixed(1)}% < 75%)');
         }
       }
 
       // Trier par taux de correspondance décroissant
       matches.sort((a, b) => (b['matchRate'] as double).compareTo(a['matchRate'] as double));
 
-      print('✨ Total de correspondances trouvées: ${matches.length}');
+      print('');
+      print('───────────────────────────────────────────────────────');
+      print('✨ RÉSULTAT FINAL: ${matches.length} correspondance(s) trouvée(s)');
+      if (matches.isNotEmpty) {
+        print('');
+        print('🎯 Liste des correspondances:');
+        for (var i = 0; i < matches.length; i++) {
+          final match = matches[i];
+          final user = match['user'] as AppUser;
+          final rate = match['matchRate'] as double;
+          print('   ${i + 1}. ${user.firstName} ${user.lastName} - ${rate.toStringAsFixed(1)}%');
+        }
+      } else {
+        print('');
+        print('💡 CONSEILS:');
+        print('   • Ajoutez plus de films à vos favoris');
+        print('   • Demandez à d\'autres utilisateurs d\'ajouter des favoris');
+        print('   • Le seuil est fixé à >=75% de correspondance');
+      }
+      print('═══════════════════════════════════════════════════════');
+      print('');
       return matches;
     } catch (e) {
       print('❌ Erreur lors de la recherche de correspondances: $e');

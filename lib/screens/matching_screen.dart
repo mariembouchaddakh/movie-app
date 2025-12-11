@@ -77,19 +77,33 @@ class _MatchingScreenState extends State<MatchingScreen> {
       }
     } catch (e) {
       debugPrint('❌ Erreur lors du chargement des correspondances: $e');
+      debugPrint('❌ Type d\'erreur: ${e.runtimeType}');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors du chargement des correspondances: $e'),
-            action: SnackBarAction(
-              label: 'Réessayer',
-              onPressed: _loadMatches,
+        
+        // Vérifier si c'est une erreur de permission
+        final errorString = e.toString().toLowerCase();
+        if (errorString.contains('permission') || errorString.contains('denied')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erreur de permission. Vérifiez les règles Firestore.'),
+              backgroundColor: Colors.red,
             ),
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: $e'),
+              action: SnackBarAction(
+                label: 'Réessayer',
+                onPressed: _loadMatches,
+              ),
+            ),
+          );
+        }
       }
     }
   }
@@ -154,7 +168,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Utilisateurs avec plus de 75% de correspondance',
+                  'Utilisateurs avec 75% ou plus de correspondance',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[700],

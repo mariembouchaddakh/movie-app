@@ -102,16 +102,16 @@ class _LoginScreenState extends State<LoginScreen> {
     
     // Utiliser un try-catch pour capturer les erreurs même après la connexion réussie
     try {
-      FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: _passwordController.text,
-      ).then((userCredential) {
+    FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: _passwordController.text,
+    ).then((userCredential) {
         debugPrint('Connexion réussie pour: ${userCredential.user?.email}');
         // Attendre un peu avant de naviguer pour laisser Firebase terminer ses opérations
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) {
+      if (mounted) {
             try {
-              Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/home');
             } catch (navError) {
               debugPrint('Erreur lors de la navigation: $navError');
               // Essayer une navigation alternative
@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           }
         });
-      }).catchError((error) {
+    }).catchError((error) {
         // Ignorer l'erreur "PigeonUserDetails" si elle survient après une connexion réussie
         final errorString = error.toString().toLowerCase();
         if (errorString.contains('pigeonuserdetails') || 
@@ -159,14 +159,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
   
   void _handleLoginError(dynamic error) {
-    // Si il y a une erreur
+      // Si il y a une erreur
     debugPrint('Erreur de connexion complète: $error');
     debugPrint('Type d\'erreur: ${error.runtimeType}');
     
-    setState(() {
-      _isLoading = false;
-      String errorMessage = 'Erreur lors de la connexion';
-      
+      setState(() {
+        _isLoading = false;
+        String errorMessage = 'Erreur lors de la connexion';
+        
       final errorString = error.toString().toLowerCase();
       final errorCode = error is FirebaseAuthException ? error.code : '';
       
@@ -184,11 +184,11 @@ class _LoginScreenState extends State<LoginScreen> {
                  errorString.contains('expired')) {
         errorMessage = 'Mot de passe incorrect.\n\nVérifiez votre mot de passe.';
       } else if (errorCode == 'invalid-email' || errorString.contains('invalid-email')) {
-        errorMessage = 'Email invalide';
+          errorMessage = 'Email invalide';
       } else if (errorCode == 'user-disabled' || errorString.contains('user-disabled')) {
         errorMessage = 'Ce compte a été désactivé par un administrateur';
       } else if (errorCode == 'too-many-requests' || errorString.contains('too-many-requests')) {
-        errorMessage = 'Trop de tentatives. Réessayez plus tard';
+          errorMessage = 'Trop de tentatives. Réessayez plus tard';
       } else if (errorCode == 'network-request-failed' || errorString.contains('network-request-failed')) {
         errorMessage = 'Erreur de connexion réseau.\nVérifiez votre connexion internet';
       } else if (errorCode == 'invalid-credential' || errorString.contains('invalid-credential')) {
@@ -207,25 +207,33 @@ class _LoginScreenState extends State<LoginScreen> {
         errorMessage = 'Erreur de connexion:\n\n${error.toString()}\n\n'
             'Code: $errorCode\n\n'
             'Vérifiez vos identifiants ou consultez les logs pour plus de détails.';
-      }
-      
-      _message = errorMessage;
+        }
+        
+        _message = errorMessage;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🎬 LoginScreen - build() appelé');
+    try {
+      debugPrint('🎬 LoginScreen - Création du Scaffold...');
+      
+      // Test avec un Scaffold minimal pour voir si le problème vient du contenu
+      debugPrint('🎬 LoginScreen - Retour du Scaffold');
+      
+      // Code original restauré
     return Scaffold(
       appBar: AppBar(
         title: const Text('Connexion'),
       ),
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
             const Icon(
               Icons.movie,
               size: 80,
@@ -234,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 40),
             const Text(
               'Movie App',
-              textAlign: TextAlign.center,
+                textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -277,15 +285,15 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             // Afficher le message
             if (_message.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  _message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _message.contains('réussie') ? Colors.green : Colors.red,
-                    fontSize: 14,
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                _message,
+                    textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _message.contains('réussie') ? Colors.green : Colors.red,
+                      fontSize: 14,
+                    ),
                 ),
               ),
             const SizedBox(height: 16),
@@ -299,11 +307,27 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: const Text('Pas de compte ? S\'inscrire'),
             ),
-            const SizedBox(height: 32), // Espace supplémentaire en bas pour le scroll
+              const SizedBox(height: 32),
           ],
         ),
       ),
     );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur dans LoginScreen.build(): $e');
+      debugPrint('Stack trace: $stackTrace');
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Erreur dans LoginScreen: $e'),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   // Nettoyer les contrôleurs quand l'écran est détruit
